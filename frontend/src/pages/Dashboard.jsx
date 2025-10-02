@@ -9,6 +9,9 @@ function Dashboard() {
   const [error, setError] = useState('');
   const { token, logout, user } = useAuth();
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const notesPerPage = 10;
+
   useEffect(() => {
     const fetchNotes = async () => {
       if (!token) {
@@ -16,7 +19,8 @@ function Dashboard() {
         return;
       }
       try {
-        const response = await axios.get(`${API_URL}/notes`, {
+        const offset = (currentPage - 1) * notesPerPage;
+        const response = await axios.get(`${API_URL}/notes?limit=${notesPerPage}&offset=${offset}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setNotes(response.data);
@@ -30,7 +34,7 @@ function Dashboard() {
     };
 
     fetchNotes();
-  }, [token, logout]);
+  }, [token, logout, currentPage]);
 
   if (!user) {
     return <p>Please log in to see your dashboard.</p>;
@@ -54,6 +58,17 @@ function Dashboard() {
             </li>
           ))}
         </ul>
+      )}
+      {notes.length > 0 && (
+        <div>
+          <button onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>
+            Previous
+          </button>
+          <span> Page {currentPage} </span>
+          <button onClick={() => setCurrentPage(currentPage + 1)} disabled={notes.length < notesPerPage}>
+            Next
+          </button>
+        </div>
       )}
     </div>
   );

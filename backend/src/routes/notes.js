@@ -9,8 +9,13 @@ router.use(authenticateToken);
 
 // Get all notes for the authenticated user
 router.get('/', async (req, res) => {
+  const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+  const offset = req.query.offset ? parseInt(req.query.offset) : 0;
   try {
-    const result = await db.query('SELECT * FROM notes WHERE user_id = $1 ORDER BY created_at DESC', [req.user.userId]);
+    const result = await db.query(
+      'SELECT * FROM notes WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+      [req.user.userId, limit, offset]
+    );
     res.json(result.rows);
   } catch (error) {
     console.error(error);
