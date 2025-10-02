@@ -47,10 +47,10 @@ jobs:
             "Providers": [
               {
                 "name": "openrouter",
-                "api_base_url": "https://api.mistral.ai/v1/chat/completion",
+                "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
                 "api_key": "$OPENROUTER_API_KEY",
                 "models": [
-                  "codestral-latest"
+                  "x-ai/grok-4-fast:free"
                 ],
                 "transformer": {
                   "use": ["openrouter"]
@@ -58,12 +58,12 @@ jobs:
               }
             ],
             "Router": {
-              "default": "mistral-chat,codestral-latest"
+              "default": "openrouter,x-ai/grok-4-fast:free"
             }
           }
           EOF
           
-          echo "✅ Router configured with FREE DeepSeek model"
+          echo "✅ Router configured with FREE Grok model"
         shell: bash
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
