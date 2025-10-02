@@ -23,28 +23,48 @@ jobs:
       pull-requests: read
       issues: read
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Run Claude Code
-        id: claude
+      - name: Install Bun
+        run: curl -fsSL https://bun.sh/install | bash
+
+      - name: Configure Claude Code Router
+        run: |
+          mkdir -p $HOME/.claude-code-router
+          cat << 'EOF' > $HOME/.claude-code-router/config.json
+          {
+            "NON_INTERACTIVE_MODE": true,
+            "LOG": true,
+            "API_TIMEOUT_MS": 600000,
+            "Providers": [
+              {
+                "name": "openrouter",
+                "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
+                "api_key": "${{ secrets.OPENROUTER_API_KEY }}",
+                "models": ["deepseek/deepseek-chat-v3.1:free"],
+                "transformer": { "use": ["openrouter"] }
+              }
+            ],
+            "Router": {
+              "default": "openrouter,deepseek/deepseek-chat-v3.1:free"
+            }
+          }
+          EOF
+        shell: bash
+
+      - name: Start Claude Code Router
+        run: |
+          nohup ~/.bun/bin/bunx @musistudio/claude-code-router@1.0.8 start &
+        shell: bash
+
+      - name: Run Claude Code Action
         uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: http://localhost:3456
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
-          # This is an optional setting that allows Claude to read CI results on PRs
-          additional_permissions: |
-            actions: read
-
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
-
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://docs.claude.com/en/docs/claude-code/sdk#command-line for available options
-          # claude_args: '--model claude-opus-4-1-20250805 --allowed-tools Bash(gh pr:*)'
-
+          anthropic_api_key: "any-string-is-ok"
