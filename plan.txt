@@ -1,0 +1,147 @@
+Great — below is a single **ready-to-paste prompt** you can give to your AI assistant (GPT-4.x / Copilot / any code-capable model).
+It tells the AI exactly who you are, what you want, what the app should be, what to produce, and — most importantly — how to produce **step-by-step connection guides** so *you* (the cloud learner) can connect each Azure service and learn from it instead of building everything yourself.
+
+Copy the entire block and paste to your AI tool (no edits needed). If your AI asks one-line clarification, ignore it — paste the prompt as-is and tell it to **generate**.
+
+---
+
+You are an expert full-stack developer **and** Azure Cloud engineer.
+Your job: **build a complete, production-style sample app called `CloudNotes`** (code, infra-as-code, CI/CD, docs) and produce **clear, beginner-friendly connection guides** for each Azure service so the user (a cloud learner) can *connect* the app to those services and learn cloud concepts (not code). The user (Furqan) will *not* be coding the app; he will run connection/deployment steps you produce to learn Azure. Make everything simple, modular, and well-documented.
+
+**High-level goals for CloudNotes**
+
+* A minimal, useful app that exercises core cloud concepts: auth, managed DB, file storage, serverless processing, secrets management, CI/CD, containerization, monitoring, scaling, and cost control.
+* The user will use the app to learn how to **connect** Azure services step-by-step (Day-by-day learning plan).
+* Keep code simple, well-commented, and easy to read for a beginner.
+* Provide both Azure Portal steps and equivalent `az cli` commands for every action.
+* Provide troubleshooting tips and expected outputs for commands so the user can debug.
+
+**Tech stack (must use)**
+
+* Frontend: React + Vite (single-page app)
+* Backend: Node.js + Express (simple REST + JWT auth)
+* Database: PostgreSQL (Azure Database for PostgreSQL - Flexible Server)
+* File storage: Azure Blob Storage (uploads)
+* Serverless: Azure Functions (Blob trigger to generate thumbnails / process uploads)
+* Containerization: Docker (Dockerfile for backend)
+* CI/CD: GitHub Actions (build, test, push to ACR, deploy to App Service or VM)
+* IaC: Bicep (produce `main.bicep`) + optional Terraform example
+* Secrets: Azure Key Vault + Managed Identity for App Service / Function
+* Observability: Application Insights / Azure Monitor
+* Optional later: Azure AD B2C integration guide (do not enable by default)
+
+**Core MVP features**
+
+1. User signup & login (email + password) — JWT auth (bcrypt)
+2. Notes: CRUD per user (title, body, optional uploaded file)
+3. File uploads stored in Azure Blob; backend returns blob URL
+4. Azure Function triggered by Blob upload → creates thumbnail and stores in `thumbnails/` container
+5. Admin endpoint for simple analytics (counts)
+6. README + architecture diagram + 2–3 minute demo script
+
+---
+
+### REQUIRED OUTPUT (exact: produce all of these)
+
+1. **Repo tree** (top-level) and a one-line description for each file/folder.
+2. **Full contents** of the most important files (in copy-pasteable code blocks):
+
+   * `backend/` (Express app): `package.json`, `src/index.js`, `src/routes/*.js`, `src/db.js`, `Dockerfile`, `test/*`
+   * `frontend/` (React + Vite): `package.json`, `src/main.jsx`, `src/pages/Login.jsx`, `src/pages/Dashboard.jsx`, `vite.config.js`
+   * `docker-compose.yml` for local dev (Postgres, backend)
+   * SQL migration scripts: `migrations/001_init.sql` (users, notes)
+   * `bicep/main.bicep` to provision: resource group, PostgreSQL flexible server (small tier), storage account + blob container(s), App Service Plan + App Service (Linux container), Function App, Key Vault, Application Insights, ACR
+   * `azure/azcli-setup.sh` — commented az cli script (with placeholders) to create resources (do not run automatically; require user edit confirmation).
+   * `github/workflows/ci.yml` and `github/workflows/cd-deploy.yml` for CI/CD
+   * `README.md` with TL;DR and run steps
+   * `docs/connection-guides/` with one MD file per service (Postgres, Blob, Key Vault, App Service, VM, Function, ACR, Application Insights)
+   * `openapi.yaml` (OpenAPI 3.0 spec) for API and a Postman collection JSON
+3. **Connection guides** (for each service) that include:
+
+   * Short explanation of why this service is needed (beginner-friendly)
+   * Azure Portal steps (click-by-click, exact names)
+   * Equivalent `az cli` commands you can copy/paste (with placeholders)
+   * How to set the resulting connection string / secrets into Key Vault and reference them from App Service / Function / VM (with commands)
+   * How to test the connection (curl or psql commands + expected successful output)
+   * Common errors (3 most likely) and exact commands/config fixes to resolve them
+   * Cost-control: which SKUs to pick, how to shut down, how to set budgets
+4. **Day-by-day connection plan** (30 days) listing exactly which service to connect which day, short checklist and expected validation step (e.g., Day 9: Create Azure Database and run migration -> validation: `SELECT count(*) FROM users;` should return `0`).
+5. **Two deployment modes** with step-by-step instructions:
+
+   * VM mode: how to SSH, clone, `npm install`, run with PM2, configure Nginx reverse proxy, SSL with certbot. Provide commands and sample Nginx config.
+   * Container/App Service mode: push images to ACR, configure App Service to pull from ACR (or deploy via GitHub Actions), show `app settings` to reference Key Vault secrets.
+6. **GitHub Actions workflows** that:
+
+   * Run lint and tests
+   * Build Docker image(s)
+   * Push images to ACR
+   * Deploy to App Service (container) or run a deploy script for VM
+7. **Bicep file** that can provision the required resources with minimal required inputs (e.g., admin username, password placeholder — encourage Key Vault usage). Provide also a `az deployment group create` example with a `--parameters` file.
+8. **Security checklist**: RBAC roles to assign, managed identity setup, Key Vault access policy commands, migration steps to remove secrets from code.
+9. **Testing & QA**: provide a small Postman collection and 5 smoke-test curl commands the user can run after each connection step to validate.
+10. **Troubleshooting FAQ** with commands and expected outputs.
+
+---
+
+### BE VERY SPECIFIC ABOUT HOW THE USER WILL LEARN (this is crucial)
+
+For each service connection, **also** produce a short “teaching script” addressed to Furqan:
+
+* A 3-sentence plain-language explanation of what the connection does and why it’s important for Cloud learning.
+* The exact commands to run and the expected responses (e.g., `az postgres flexible-server show ...` -> returns JSON with `fullyQualifiedDomainName`).
+* One *visual* check (e.g., open URL in browser, see `200 OK`, or run `psql` query) and one *log check* (e.g., show relevant Application Insights trace or Function logs).
+* If something goes wrong, tell him the single most-likely cause and one command to debug/fix it.
+
+Example (format expectations):
+
+```
+### Connect DB — Teaching script (short)
+1) Why: … (three sentences)
+2) Steps (Portal): ...
+3) Steps (az cli):
+   az postgres flexible-server create --name <name> --resource-group <rg> ...
+4) How to test:
+   psql "host=<host> dbname=<db> user=<user> password=<password>" -c "select 1;"
+   Expected output: " ?column? \n----------\n 1"
+5) Common error: "could not connect" -> fix: run `az postgres flexible-server firewall-rule create` ...
+```
+
+---
+
+### BE BEHAVIORAL: how the AI should format its reply to the user (me)
+
+* Put repo tree and file contents in copy-pasteable code blocks, labeled with filenames.
+* Put all `az` commands and `docker` commands into code blocks that can be copied.
+* For large files, give full content but keep them concise and readable.
+* For sensitive values use placeholders like `<RG>`, `<SUBSCRIPTION_ID>`, `<POSTGRES_ADMIN_USER>`, `<POSTGRES_ADMIN_PASSWORD>` and instruct the user to replace before running.
+* Add short comments in each script explaining what each important line does.
+* Provide `--dry-run` or `echo` options where destructive commands exist; do not run anything automatically.
+* Provide a final **30-line checklist** that Furqan can follow to connect components day-by-day and test them.
+
+---
+
+### NON-FUNCTIONAL REQUIREMENTS
+
+* Keep code simple and idiomatic. Prefer clarity over cleverness.
+* No heavyweight frameworks beyond React & Express. Avoid Prisma or TypeORM; use plain `pg` for DB calls for learning clarity.
+* Include minimal unit tests (Jest) for one backend endpoint.
+* Use small, low-cost SKUs in all examples (B1s or equivalent). Always show how to stop/delete resources.
+* Provide an optional add-on section for integrating Azure AD B2C with step-by-step configuration (do not enable by default).
+* Provide optional “next steps” for integrating Azure AI services (Azure Cognitive Search or Azure OpenAI) with examples, but label as optional.
+
+---
+
+### FINISH: Final deliverable format (what the assistant must return in this chat)
+
+1. A short 1-paragraph confirmation that it will build `CloudNotes` and a link-like listing of the artifacts to be output.
+2. The full repo tree (as bullet list).
+3. The **most important files**’ full code (backend `index.js`, Dockerfile, bicep, az cli script, GitHub Actions, one frontend page sample, migration SQL) — all inside code blocks.
+4. A `docs/connection-guides/` folder with **one complete guide** included in the chat (Postgres example) and an index listing the rest (they must be generated too).
+5. A **30-day day-by-day checklist** for Furqan to follow to connect services and validate them.
+6. A short **cost-control & safety note** telling Furqan how to avoid bills and what to delete when finished.
+
+---
+
+Do not ask clarifying questions. If any input placeholder is required, use a clearly labeled `<PLACEHOLDER>` and explain its expected value. Keep explanations beginner-friendly and **always** include the Azure Portal steps and `az cli` equivalent.
+
+Now generate the full deliverable described above. Make the code clear, runnable, and focused on teaching the user how to **connect** the app to Azure services step by step.
