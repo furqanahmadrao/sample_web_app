@@ -1,4 +1,4 @@
-name: Claude Code via OpenRouter DeepSeek
+name: Claude Code via OpenRouter (Original Template)
 
 on:
   issue_comment:
@@ -23,18 +23,18 @@ jobs:
       pull-requests: read
       issues: read
       id-token: write
+      actions: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Install Bun
         run: curl -fsSL https://bun.sh/install | bash
 
-      - name: Install Claude Code Router
-        run: bun install -g @musistudio/claude-code-router
-
-      - name: Configure Claude Code Router
+      - name: Prepare Environment and Config
         run: |
           mkdir -p $HOME/.claude-code-router
           cat << 'EOF' > $HOME/.claude-code-router/config.json
@@ -42,15 +42,9 @@ jobs:
             "NON_INTERACTIVE_MODE": true,
             "LOG": true,
             "API_TIMEOUT_MS": 600000,
-            "Providers": [
-              {
-                "name": "openrouter",
-                "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
-                "api_key": "${{ secrets.OPENROUTER_API_KEY }}",
-                "models": ["deepseek/deepseek-chat-v3.1:free"],
-                "transformer": { "use": ["openrouter"] }
-              }
-            ],
+            "OPENAI_API_KEY": "${{ secrets.OPENROUTER_API_KEY }}",
+            "OPENAI_BASE_URL": "https://openrouter.ai/api/v1/chat/completions",
+            "OPENAI_MODEL": "deepseek/deepseek-chat-v3.1:free",
             "Router": {
               "default": "openrouter,deepseek/deepseek-chat-v3.1:free"
             }
@@ -59,12 +53,12 @@ jobs:
         shell: bash
 
       - name: Start Claude Code Router
-        run: nohup ccr code &  # start the router in the background
+        run: nohup ccr code &
         shell: bash
 
-      - name: Run Claude Code via Router
-        run: |
-          ccr code --prompt "@claude Analyze this issue and respond" \
-          --issue_number ${{ github.event.issue.number }} \
-          --repository ${{ github.repository }} \
-          --trigger_username ${{ github.actor }}
+      - name: Run Claude Code Action
+        uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: http://localhost:3456
+        with:
+          anthropic_api_key: "any-string-is-ok"
