@@ -1,99 +1,90 @@
-import React, { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import axios from 'axios'
+import React,
+{
+  useState
+}
+from 'react';
+import {
+  useNavigate
+}
+from 'react-router-dom';
+import {
+  useAuth
+}
+from '../contexts/AuthContext';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 function Login() {
-  const [isLogin, setIsLogin] = useState(true)
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: ''
-  })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const {
+    login
+  } = useAuth();
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
+    e.preventDefault();
+    setError('');
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register'
-      const response = await axios.post(endpoint, formData)
-
-      login(response.data.user, response.data.token)
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        email,
+        password
+      });
+      login(response.data.token);
+      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong')
-    } finally {
-      setLoading(false)
+      setError('Failed to login. Please check your credentials.');
+      console.error(err);
     }
+  };
+
+  return ( <
+    div >
+    <
+    h2 > Login < /h2> <
+    form onSubmit = {
+      handleSubmit
+    } >
+    <
+    div >
+    <
+    label > Email: < /label> <
+    input type = "email"
+    value = {
+      email
+    }
+    onChange = {
+      (e) => setEmail(e.target.value)
+    }
+    required / >
+    <
+    /div> <
+    div >
+    <
+    label > Password: < /label> <
+    input type = "password"
+    value = {
+      password
+    }
+    onChange = {
+      (e) => setPassword(e.target.value)
+    }
+    required / >
+    <
+    /div> {
+      error && < p style = {
+          {
+            color: 'red'
+          }
+        } > {
+          error
+        } < /p>} <
+        button type = "submit" > Login < /button> <
+        /form> <
+        /div>
+    );
   }
 
-  return (
-    <div className="login-container">
-      <div className="login-form">
-        <h2>{isLogin ? 'Login' : 'Register'}</h2>
-        {error && <div className="error">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          {!isLogin && (
-            <div>
-              <label>Name:</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          )}
-
-          <div>
-            <label>Email:</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div>
-            <label>Password:</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <button type="submit" disabled={loading}>
-            {loading ? 'Processing...' : (isLogin ? 'Login' : 'Register')}
-          </button>
-        </form>
-
-        <p>
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button
-            type="button"
-            onClick={() => setIsLogin(!isLogin)}
-            className="link-button"
-          >
-            {isLogin ? 'Register' : 'Login'}
-          </button>
-        </p>
-      </div>
-    </div>
-  )
-}
-
-export default Login
+  export default Login;

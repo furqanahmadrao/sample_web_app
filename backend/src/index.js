@@ -1,38 +1,41 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const app = express();
-require('dotenv').config();
+const helmet = require('helmet');
+const authRoutes = require('./routes/auth');
+const notesRoutes = require('./routes/notes');
+const adminRoutes = require('./routes/admin');
 
-// Azure Application Insights
-if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
-  const appInsights = require('applicationinsights');
-  appInsights.setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING).start();
-}
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
+app.use(helmet());
 app.use(express.json());
-app.use(express.static('uploads'));
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/notes', require('./routes/notes'));
-app.use('/api/admin', require('./routes/admin'));
-
-// Health endpoint
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.status(200).json({ status: 'UP' });
 });
 
-// Error handling
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/notes', notesRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  res.status(500).send('Something broke!');
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start server
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
 
 module.exports = app;

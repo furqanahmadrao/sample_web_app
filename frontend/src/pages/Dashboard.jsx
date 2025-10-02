@@ -1,128 +1,62 @@
-import React, { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import axios from 'axios'
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 function Dashboard() {
-  const { user, logout } = useAuth()
-  const [notes, setNotes] = useState([])
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [newNote, setNewNote] = useState({ title: '', content: '', file: null })
-  const [loading, setLoading] = useState(false)
+  const [notes, setNotes] = useState([]);
+  const [error, setError] = useState('');
+  const { token, logout, user } = useAuth();
 
   useEffect(() => {
-    fetchNotes()
-  }, [])
-
-  const fetchNotes = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await axios.get('/api/notes', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      setNotes(response.data)
-    } catch (error) {
-      console.error('Failed to fetch notes:', error)
-    }
-  }
-
-  const handleCreateNote = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-
-    try {
-      const token = localStorage.getItem('token')
-      const formData = new FormData()
-      formData.append('title', newNote.title)
-      formData.append('content', newNote.content)
-      if (newNote.file) {
-        formData.append('file', newNote.file)
+    const fetchNotes = async () => {
+      if (!token) {
+        setError('You are not logged in.');
+        return;
       }
-
-      await axios.post('/api/notes', formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+      try {
+        const response = await axios.get(`${API_URL}/notes`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setNotes(response.data);
+      } catch (err) {
+        setError('Failed to fetch notes.');
+        console.error(err);
+        if (err.response && err.response.status === 403) {
+          logout(); // If token is invalid, log out user
         }
-      })
+      }
+    };
 
-      setNewNote({ title: '', content: '', file: null })
-      setShowCreateForm(false)
-      fetchNotes()
-    } catch (error) {
-      console.error('Failed to create note:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+    fetchNotes();
+  }, [token, logout]);
 
-  const handleFileChange = (e) => {
-    setNewNote({ ...newNote, file: e.target.files[0] })
+  if (!user) {
+    return <p>Please log in to see your dashboard.</p>;
   }
 
   return (
-    <div className="dashboard">
-      <header>
-        <h1>CloudNotes</h1>
-        <div className="user-info">
-          <span>Welcome, {user?.name}</span>
-          <button onClick={logout}>Logout</button>
-        </div>
-      </header>
-
-      <main>
-        <div className="notes-header">
-          <h2>Your Notes</h2>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="primary"
-          >
-            {showCreateForm ? 'Cancel' : 'Add Note'}
-          </button>
-        </div>
-
-        {showCreateForm && (
-          <form onSubmit={handleCreateNote} className="note-form">
-            <input
-              type="text"
-              placeholder="Title"
-              value={newNote.title}
-              onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
-              required
-            />
-            <textarea
-              placeholder="Content"
-              value={newNote.content}
-              onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
-              required
-            />
-            <input type="file" onChange={handleFileChange} />
-            <button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Note'}
-            </button>
-          </form>
-        )}
-
-        <div className="notes-grid">
+    <div>
+      <h2>Dashboard</h2>
+      <p>Welcome, {user.email}!</p>
+      <button onClick={logout}>Logout</button>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      <h3>Your Notes</h3>
+      {notes.length === 0 ? (
+        <p>You have no notes yet.</p>
+      ) : (
+        <ul>
           {notes.map((note) => (
-            <div key={note.id} className="note-card">
-              <h3>{note.title}</h3>
+            <li key={note.id}>
+              <h4>{note.title}</h4>
               <p>{note.content}</p>
-              {note.file_url && (
-                <div>
-                  <a href={note.file_url} target="_blank" rel="noopener noreferrer">
-                    View File
-                  </a>
-                </div>
-              )}
-              <small>
-                Last updated: {new Date(note.updated_at).toLocaleDateString()}
-              </small>
-            </div>
+            </li>
           ))}
-        </div>
-      </main>
+        </ul>
+      )}
     </div>
-  )
+  );
 }
 
-export default Dashboard
+export default Dashboard;

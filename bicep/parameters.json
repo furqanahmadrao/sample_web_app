@@ -2,14 +2,19 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "environmentName": {
-      "value": "dev"
+    "resourceNamePrefix": {
+      "value": "cloudnotes-dev"
     },
-    "adminUsername": {
-      "value": "cloudnotesadmin"
+    "postgresAdminLogin": {
+      "value": "demoadmin"
     },
-    "adminPassword": {
-      "value": "<REPLACE_WITH_STRONG_PASSWORD>"
+    "postgresAdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>/providers/Microsoft.KeyVault/vaults/<KEY_VAULT_NAME>"
+        },
+        "secretName": "PostgresAdminPassword"
+      }
     }
   }
 }

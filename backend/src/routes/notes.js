@@ -1,111 +1,92 @@
 const express = require('express');
-const multer = require('multer');
-const pool = require('../db');
+const db = require('../db');
+const authenticateToken = require('../middleware/authenticateToken');
 
 const router = express.Router();
 
-// Configure multer for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// Middleware to authenticate all routes in this file
+router.use(authenticateToken);
 
-// Middleware to verify JWT
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  const jwt = require('jsonwebtoken');
+// Get all notes for the authenticated user
+router.get('/', async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
-    req.userId = decoded.userId;
-    next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Invalid token' });
-  }
-};
-
-// Get all notes for user
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT id, title, content, file_url, created_at, updated_at FROM notes WHERE user_id = $1 ORDER BY updated_at DESC',
-      [req.userId]
-    );
-
+    const result = await db.query('SELECT * FROM notes WHERE user_id = $1 ORDER BY created_at DESC', [req.user.userId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Get notes error:', error);
-    res.status(500).json({ error: 'Failed to fetch notes' });
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Create new note
-router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
+// Create a new note
+router.post('/', async (req, res) => {
+  const { title, content, file_url } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+
   try {
-    const { title, content } = req.body;
-    let fileUrl = null;
-
-    // If file uploaded, store in Azure Blob (simulated for now)
-    if (req.file) {
-      // In production, this would upload to Azure Blob Storage
-      fileUrl = `/uploads/${Date.now()}-${req.file.originalname}`;
-    }
-
-    const result = await pool.query(
-      'INSERT INTO notes (user_id, title, content, file_url) VALUES ($1, $2, $3, $4) RETURNING id, title, content, file_url, created_at',
-      [req.userId, title, content, fileUrl]
+    const result = await db.query(
+      'INSERT INTO notes (user_id, title, content, file_url) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.user.userId, title, content, file_url]
     );
-
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Create note error:', error);
-    res.status(500).json({ error: 'Failed to create note' });
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Update note
-router.put('/:id', authenticateToken, async (req, res) => {
+// Get a single note by ID
+router.get('/:id', async (req, res) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-    const { title, content } = req.body;
-
-    const result = await pool.query(
-      'UPDATE notes SET title = $1, content = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4 RETURNING id, title, content, file_url, updated_at',
-      [title, content, id, req.userId]
-    );
-
+    const result = await db.query('SELECT * FROM notes WHERE id = $1 AND user_id = $2', [id, req.user.userId]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Note not found' });
     }
-
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Update note error:', error);
-    res.status(500).json({ error: 'Failed to update note' });
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Delete note
-router.delete('/:id', authenticateToken, async (req, res) => {
+// Update a note
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, content } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
+
   try {
-    const { id } = req.params;
-
-    const result = await pool.query(
-      'DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING id',
-      [id, req.userId]
+    const result = await db.query(
+      'UPDATE notes SET title = $1, content = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING *',
+      [title, content, id, req.user.userId]
     );
-
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Note not found' });
     }
-
-    res.json({ message: 'Note deleted successfully' });
+    res.json(result.rows[0]);
   } catch (error) {
-    console.error('Delete note error:', error);
-    res.status(500).json({ error: 'Failed to delete note' });
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a note
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query('DELETE FROM notes WHERE id = $1 AND user_id = $2 RETURNING *', [id, req.user.userId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+    res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

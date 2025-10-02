@@ -1,47 +1,42 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useState, useContext } from 'react';
+import jwt_decode from 'jwt-decode';
 
-const AuthContext = createContext()
+const AuthContext = createContext(null);
 
-export function useAuth() {
-  return useContext(AuthContext)
-}
+export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(localStorage.getItem('token'));
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
-
-    if (token && userData) {
-      setUser(JSON.parse(userData))
-    }
-    setLoading(false)
-  }, [])
-
-  const login = (userData, token) => {
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(userData))
-    setUser(userData)
-  }
+  const login = (newToken) => {
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+  };
 
   const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setUser(null)
-  }
+    localStorage.removeItem('token');
+    setToken(null);
+  };
+
+  const getUser = () => {
+    if (!token) return null;
+    try {
+      return jwt_decode(token);
+    } catch (error) {
+      console.error('Invalid token:', error);
+      logout();
+      return null;
+    }
+  };
 
   const value = {
-    user,
+    token,
     login,
     logout,
-    loading
-  }
+    user: getUser(),
+  };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  )
-}
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};

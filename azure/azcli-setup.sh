@@ -1,119 +1,64 @@
 #!/bin/bash
 
-# CloudNotes Azure Setup Script
-# This script helps set up Azure resources for CloudNotes application
-# IMPORTANT: Replace placeholders before running!
+# Stop on any error
+set -e
 
-echo "=== CloudNotes Azure Setup ==="
-echo "This script will help you set up Azure resources for CloudNotes."
-echo "Please replace all <PLACEHOLDER> values before running!"
-echo ""
+# --- Configuration ---
+# Replace these placeholders with your desired values
 
-# Check if Azure CLI is installed
-if ! command -v az &> /dev/null; then
-    echo "Azure CLI is not installed. Please install it first:"
-    echo "https://docs.microsoft.com/en-us/cli/azure/install-azure-cli"
-    exit 1
+# The name of the resource group to create.
+RESOURCE_GROUP="<RESOURCE_GROUP_NAME>"
+
+# The Azure region where resources will be deployed.
+LOCATION="<AZURE_REGION>" # e.g., "eastus"
+
+# A unique prefix for your resources to avoid naming conflicts.
+RESOURCE_PREFIX="<UNIQUE_PREFIX>" # e.g., "cn-furqan"
+
+# The administrator username for the PostgreSQL server.
+# IMPORTANT: Choose a strong, memorable username.
+POSTGRES_ADMIN_USER="<POSTGRES_ADMIN_USERNAME>"
+
+# The administrator password for the PostgreSQL server.
+# IMPORTANT: Use a strong, secure password. Do not hardcode it here in a production script.
+# For this learning exercise, you will be prompted to enter it.
+echo "Please enter the password for the PostgreSQL administrator ($POSTGRES_ADMIN_USER):"
+read -s POSTGRES_ADMIN_PASSWORD
+
+# --- Script Execution ---
+
+echo "Starting Azure resource deployment for CloudNotes..."
+
+# 1. Login to Azure (if not already logged in)
+az account show > /dev/null 2>&1
+if [ $? != 0 ]; then
+  echo "You are not logged into Azure. Running 'az login'..."
+  az login
 fi
 
-# Check if user is logged in
-az account show &> /dev/null
-if [ $? -ne 0 ]; then
-    echo "Please log in to Azure CLI first:"
-    echo "az login"
-    exit 1
-fi
+# 2. Create Resource Group
+echo "Creating resource group '$RESOURCE_GROUP' in '$LOCATION'..."
+az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --tags project=cloudnotes-learner
 
-# Configuration - REPLACE THESE VALUES
-SUBSCRIPTION_ID="<YOUR_SUBSCRIPTION_ID>"
-RESOURCE_GROUP="cloudnotes-rg"
-LOCATION="eastus"
-ENVIRONMENT="dev"
-ADMIN_USERNAME="cloudnotesadmin"
-ADMIN_PASSWORD="<STRONG_PASSWORD>"  # Replace with strong password
-
-# Set subscription
-echo "Setting subscription to: $SUBSCRIPTION_ID"
-az account set --subscription "$SUBSCRIPTION_ID"
-
-# Create resource group
-echo "Creating resource group: $RESOURCE_GROUP"
-az group create \
-  --name "$RESOURCE_GROUP" \
-  --location "$LOCATION" \
-  --tags environment="$ENVIRONMENT" project="cloudnotes"
-
-# Deploy Bicep template
-echo "Deploying Azure resources with Bicep..."
+# 3. Deploy Bicep Template
+echo "Deploying Bicep template... This may take several minutes."
 az deployment group create \
   --resource-group "$RESOURCE_GROUP" \
-  --template-file "../bicep/main.bicep" \
-  --parameters "@../bicep/parameters.json" \
+  --template-file ../bicep/main.bicep \
   --parameters \
-    environmentName="$ENVIRONMENT" \
-    adminUsername="$ADMIN_USERNAME" \
-    adminPassword="$ADMIN_PASSWORD"
+    resourceNamePrefix="$RESOURCE_PREFIX" \
+    postgresAdminLogin="$POSTGRES_ADMIN_USER" \
+    postgresAdminPassword="$POSTGRES_ADMIN_PASSWORD" \
+  --name "cloudnotes-deployment"
 
-# Get deployment outputs
+echo "Deployment complete!"
+
+# 4. Show Outputs
 echo "Getting deployment outputs..."
-POSTGRES_HOST=$(az deployment group show \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "main" \
-  --query properties.outputs.postgresHost.value \
-  --output tsv)
-
-STORAGE_ACCOUNT=$(az deployment group show \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "main" \
-  --query properties.outputs.storageAccountName.value \
-  --output tsv)
-
-KEY_VAULT=$(az deployment group show \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "main" \
-  --query properties.outputs.keyVaultName.value \
-  --output tsv)
-
-# Configure PostgreSQL firewall to allow Azure services
-echo "Configuring PostgreSQL firewall..."
-az postgres flexible-server firewall-rule create \
-  --resource-group "$RESOURCE_GROUP" \
-  --server-name "cloudnotes-${ENVIRONMENT}-psql" \
-  --name "AllowAzureServices" \
-  --start-ip-address "0.0.0.0" \
-  --end-ip-address "0.0.0.0"
-
-# Create storage connection string
-STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "$STORAGE_ACCOUNT" \
-  --query connectionString \
-  --output tsv)
-
-# Store secrets in Key Vault
-echo "Storing secrets in Key Vault..."
-az keyvault secret set \
-  --vault-name "$KEY_VAULT" \
-  --name "PostgresConnectionString" \
-  --value "postgresql://${ADMIN_USERNAME}:${ADMIN_PASSWORD}@${POSTGRES_HOST}/cloudnotes?sslmode=require"
-
-az keyvault secret set \
-  --vault-name "$KEY_VAULT" \
-  --name "StorageConnectionString" \
-  --value "$STORAGE_CONNECTION_STRING"
-
-az keyvault secret set \
-  --vault-name "$KEY_VAULT" \
-  --name "JwtSecret" \
-  --value "your-super-secret-jwt-key-here"
-
-echo ""
-echo "=== Setup Complete ==="
-echo "PostgreSQL Host: $POSTGRES_HOST"
-echo "Storage Account: $STORAGE_ACCOUNT"
-echo "Key Vault: $KEY_VAULT"
-echo ""
-echo "Next steps:"
-echo "1. Run database migrations"
-echo "2. Deploy your application"
-echo "3. Configure App Service to use Key Vault secrets"
+outputs=$(az deployment group show --resource-group "$RESOURCE_GROUP" --name "cloudnotes-deployment" --query "properties.outputs")
+echo "--------------------------------------------------"
+echo "Deployment Outputs:"
+echo $outputs | jq .
+echo "--------------------------------------------------"
+echo "You can now use these values to configure your application and CI/CD pipeline."
+echo "Next steps: Configure secrets in Azure Key Vault and set up GitHub Actions."
