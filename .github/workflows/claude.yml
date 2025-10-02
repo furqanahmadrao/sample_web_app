@@ -47,10 +47,10 @@ jobs:
             "Providers": [
               {
                 "name": "openrouter",
-                "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
+                "api_base_url": "https://api.mistral.ai/v1/chat/completion",
                 "api_key": "$OPENROUTER_API_KEY",
                 "models": [
-                  "deepseek/deepseek-chat-v3.1:free"
+                  "codestral-latest"
                 ],
                 "transformer": {
                   "use": ["openrouter"]
@@ -58,7 +58,7 @@ jobs:
               }
             ],
             "Router": {
-              "default": "openrouter,deepseek/deepseek-chat-v3.1:free"
+              "default": "mistral-chat,codestral-latest"
             }
           }
           EOF
