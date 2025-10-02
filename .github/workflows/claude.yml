@@ -1,4 +1,4 @@
-name: Claude Code
+name: Claude Code via OpenRouter DeepSeek
 
 on:
   issue_comment:
@@ -27,11 +27,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Install Bun
         run: curl -fsSL https://bun.sh/install | bash
+
+      - name: Install Claude Code Router
+        run: bun install -g @musistudio/claude-code-router
 
       - name: Configure Claude Code Router
         run: |
@@ -58,13 +59,12 @@ jobs:
         shell: bash
 
       - name: Start Claude Code Router
-        run: |
-          nohup ~/.bun/bin/bunx @musistudio/claude-code-router@1.0.8 start &
+        run: nohup ccr code &  # start the router in the background
         shell: bash
 
-      - name: Run Claude Code Action
-        uses: anthropics/claude-code-action@v1
-        env:
-          ANTHROPIC_BASE_URL: http://localhost:3456
-        with:
-          anthropic_api_key: "any-string-is-ok"
+      - name: Run Claude Code via Router
+        run: |
+          ccr code --prompt "@claude Analyze this issue and respond" \
+          --issue_number ${{ github.event.issue.number }} \
+          --repository ${{ github.repository }} \
+          --trigger_username ${{ github.actor }}
