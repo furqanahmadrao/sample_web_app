@@ -1,25 +1,20 @@
-FROM node:18-alpine
+# Use an official Node.js runtime as a parent image
+FROM node:18-slim
 
-WORKDIR /app
+# Set the working directory in the container
+WORKDIR /usr/src/app
 
-# Copy package files
+# Copy package.json and package-lock.json to leverage Docker cache
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install app dependencies
+RUN npm install
 
-# Copy source code
-COPY src/ ./src/
+# Copy the rest of the application's source code from your host to your image filesystem.
+COPY . .
 
-# Create uploads directory
-RUN mkdir -p uploads
-
-# Expose port
+# Make port 3000 available to the world outside this container
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
-
-# Start application
+# Run the app when the container launches
 CMD ["npm", "start"]

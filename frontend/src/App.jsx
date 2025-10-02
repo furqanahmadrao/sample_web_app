@@ -1,35 +1,22 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import './App.css'
-
-function ProtectedRoute({ children }) {
-  const { user } = useAuth()
-  return user ? children : <Navigate to="/login" />
-}
+import React from 'react';
+import { Outlet, Link } from 'react-router-dom';
+import './App.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="app">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
-  )
+    <div className="App">
+      <header className="App-header">
+        <h1>CloudNotes</h1>
+        <nav>
+          <Link to="/login">Login</Link>
+          <Link to="/dashboard">Dashboard</Link>
+        </nav>
+      </header>
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;

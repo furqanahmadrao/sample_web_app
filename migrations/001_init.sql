@@ -1,36 +1,40 @@
--- CloudNotes Database Migration
--- Creates the initial schema for users and notes
-
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Create users table
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Notes table
-CREATE TABLE IF NOT EXISTS notes (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    content TEXT,
-    file_url VARCHAR(500),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Create notes table
+CREATE TABLE notes (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  content TEXT,
+  file_url VARCHAR(2048),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user
+    FOREIGN KEY(user_id)
+    REFERENCES users(id)
+    ON DELETE CASCADE
 );
 
--- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+-- Create an index on user_id for faster queries on notes by user
+CREATE INDEX idx_notes_user_id ON notes(user_id);
 
--- Insert sample data for testing (optional)
-INSERT INTO users (email, password, name) VALUES
-('test@example.com', '$2b$10$examplehashedpassword', 'Test User')
-ON CONFLICT (email) DO NOTHING;
+-- Create a function to update the updated_at timestamp
+CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-INSERT INTO notes (user_id, title, content) VALUES
-(1, 'Welcome Note', 'This is your first note in CloudNotes!')
-ON CONFLICT DO NOTHING;
+-- Create a trigger to automatically update the updated_at field on notes update
+CREATE TRIGGER set_timestamp
+BEFORE UPDATE ON notes
+FOR EACH ROW
+EXECUTE PROCEDURE trigger_set_timestamp();

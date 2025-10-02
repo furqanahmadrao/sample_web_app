@@ -1,49 +1,38 @@
 version: '3.8'
-
 services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: cloudnotes
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   backend:
     build: ./backend
     ports:
       - "3000:3000"
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: cloudnotes
-      DB_USER: postgres
-      DB_PASSWORD: password
-      JWT_SECRET: your-super-secret-jwt-key-here
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - DATABASE_URL=postgres://user:password@db:5432/cloudnotes
+      - JWT_SECRET=thisisadevelopmesecret
+      - NODE_ENV=development
     volumes:
-      - ./backend/uploads:/app/uploads
-    command: >
-      sh -c "
-      echo 'Waiting for PostgreSQL...' &&
-      until nc -z postgres 5432; do
-        sleep 1
-      done &&
-      echo 'Running migrations...' &&
-      node scripts/migrate.js &&
-      echo 'Starting server...' &&
-      npm start
-      "
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    command: npm run dev
+
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=cloudnotes
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d cloudnotes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

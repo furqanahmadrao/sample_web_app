@@ -1,0 +1,54 @@
+name: Backend CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource-group:
+        description: 'The name of the Azure Resource Group'
+        required: true
+      acr-name:
+        description: 'The name of the Azure Container Registry'
+        required: true
+      app-service-name:
+        description: 'The name of the Azure App Service'
+        required: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Log in to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Log in to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ github.event.inputs.acr-name }}.azurecr.io
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+
+    - name: Build and push Docker image
+      working-directory: ./backend
+      run: |
+        docker build . -t ${{ github.event.inputs.acr-name }}.azurecr.io/cloudnotes-backend:${{ github.sha }}
+        docker push ${{ github.event.inputs.acr-name }}.azurecr.io/cloudnotes-backend:${{ github.sha }}
+
+    - name: Deploy to Azure App Service
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ github.event.inputs.app-service-name }}
+        resource-group-name: ${{ github.event.inputs.resource-group }}
+        images: '${{ github.event.inputs.acr-name }}.azurecr.io/cloudnotes-backend:${{ github.sha }}'
+
+    - name: Log out from Azure
+      run: |
+        az logout
+        az cache purge
+        az account clear
+      if: always()

@@ -1,100 +1,62 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const pool = require('../db');
+const db = require('../db');
 
 const router = express.Router();
+const SALT_ROUNDS = 10;
 
-// Register
-router.post('/register', async (req, res) => {
+// User Signup
+router.post('/signup', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
   try {
-    const { email, password, name } = req.body;
-
-    // Check if user exists
-    const userExists = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const result = await db.query(
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
+      [email, hashedPassword]
     );
-
-    if (userExists.rows.length > 0) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
-
-    // Hash password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // Create user
-    const result = await pool.query(
-      'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name',
-      [email, hashedPassword, name]
-    );
-
-    // Generate JWT
-    const token = jwt.sign(
-      { userId: result.rows[0].id },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '24h' }
-    );
-
-    res.status(201).json({
-      user: {
-        id: result.rows[0].id,
-        email: result.rows[0].email,
-        name: result.rows[0].name
-      },
-      token
-    });
-
+    res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+    if (error.code === '23505') { // unique_violation
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Login
+// User Login
 router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
   try {
-    const { email, password } = req.body;
-
-    // Find user
-    const result = await pool.query(
-      'SELECT id, email, password, name FROM users WHERE email = $1',
-      [email]
-    );
-
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = result.rows[0];
+    const isMatch = await bcrypt.compare(password, user.password_hash);
 
-    // Check password
-    const validPassword = await bcrypt.compare(password, user.password);
-
-    if (!validPassword) {
+    if (!isMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate JWT
-    const token = jwt.sign(
-      { userId: user.id },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '24h' }
-    );
-
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name
-      },
-      token
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
     });
 
+    res.json({ token });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
