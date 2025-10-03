@@ -11,6 +11,7 @@ The primary goal of CloudNotes is not just to provide code, but to offer a struc
 - [Local Development Setup](#local-development-setup)
 - [Azure Deployment](#azure-deployment)
 - [Learning Path: 30-Day Connection Plan](#learning-path-30-day-connection-plan)
+- [Documentation](#documentation)
 - [Security Checklist](#security-checklist)
 - [Cost Control](#cost-control)
 
@@ -33,15 +34,28 @@ CloudNotes is built with a modern, scalable architecture that mirrors what you'd
 
 ## Features
 
+### Core Features
 - **User Authentication**: Secure user signup and login using email/password and JWTs.
 - **Notes Management**: Full CRUD (Create, Read, Update, Delete) operations for notes, tied to individual users.
-- **Search & Filter**: Search notes by content/title, filter by tags, pinned status, or archived status.
-- **Tags System**: Categorize notes with multiple tags for better organization.
-- **Pin/Favorite Notes**: Mark important notes to keep them at the top of your list.
-- **Archive Notes**: Soft-delete notes by archiving them instead of permanent deletion.
 - **File Uploads**: Attach files to notes, which are securely stored in Azure Blob Storage.
 - **Serverless Processing**: An Azure Function automatically triggers on file upload to perform background tasks.
-- **Admin Analytics**: Enhanced admin endpoint with statistics on notes, tags, archived items, and more.
+
+### ✨ New Enhanced Features
+- **🔍 Full-Text Search**: Search notes by title and content using PostgreSQL's powerful full-text search with automatic stemming and relevance ranking.
+- **🏷️ Tags System**: Organize notes with multiple tags per note. Filter by tag, view all tags, and manage your note categorization.
+- **📌 Pin/Favorite Notes**: Mark important notes to pin them at the top of your list with visual indicators and priority sorting.
+- **🗄️ Archive System**: Soft-delete notes by archiving them. Archived notes are hidden from the main view but can be easily restored.
+- **🎯 Advanced Filtering**: Combine search, tags, pinned status, and archived status for powerful note discovery.
+- **📊 Enhanced Analytics**: Admin endpoint provides detailed statistics including archived, pinned, and tagged note counts.
+
+### User Interface
+- **Rich Dashboard**: Create and edit notes with inline forms
+- **Smart Filters**: Real-time search, tag dropdown, and checkbox filters
+- **Visual Indicators**: Pin icons (📌), tag badges, colored backgrounds for note status
+- **Quick Actions**: One-click pin/unpin, archive/unarchive, edit, and delete
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+
+For detailed information about features and usage, see the [Features Guide](docs/FEATURES_GUIDE.md).
 
 ## Local Development Setup
 
@@ -146,6 +160,24 @@ The core of this project is the hands-on learning path. Follow the connection gu
 | 7-9 | **Connect**: PostgreSQL Database             | Backend can read/write data from Azure DB.    |
 | 10-12| **Connect**: Azure Blob Storage              | File uploads from the app appear in storage.  |
 | ... | ...                                          | ...                                           |
+
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+### For Users
+- **[Features Guide](docs/FEATURES_GUIDE.md)** - Complete guide to all features with usage examples and best practices
+- **[Demo Script](docs/DEMO_SCRIPT.md)** - Interactive walkthrough with curl examples to test all features
+
+### For Developers
+- **[New Features API](docs/NEW_FEATURES.md)** - Full API documentation for search, tags, pin, and archive features
+- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Developer quick reference for database schema, endpoints, and code examples
+- **[Connection Guides](docs/connection-guides/)** - Step-by-step guides for connecting to Azure services
+
+### Getting Started
+1. Read the [Features Guide](docs/FEATURES_GUIDE.md) to understand what CloudNotes can do
+2. Follow the [Demo Script](docs/DEMO_SCRIPT.md) to try out features with curl commands
+3. Check the [Quick Reference](docs/QUICK_REFERENCE.md) when developing
 
 ## Security Checklist
 
