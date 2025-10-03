@@ -51,3 +51,5 @@ Thumbs.db
 # Other
 npm-shrinkwrap.json
 package-lock.json.orig
+.gemini/
+gha-creds-*.json
