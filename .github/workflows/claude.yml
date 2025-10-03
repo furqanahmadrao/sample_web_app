@@ -28,6 +28,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          
+      - name: Set Cloud Code identity
+        run: |
+          git config --global user.name "Cloud Code"
+          git config --global user.email "123456+cloud-code-bot@users.noreply.github.com"
 
       - name: Setup Claude Code Router
         run: |
