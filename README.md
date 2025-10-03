@@ -35,9 +35,13 @@ CloudNotes is built with a modern, scalable architecture that mirrors what you'd
 
 - **User Authentication**: Secure user signup and login using email/password and JWTs.
 - **Notes Management**: Full CRUD (Create, Read, Update, Delete) operations for notes, tied to individual users.
+- **Search & Filter**: Search notes by content/title, filter by tags, pinned status, or archived status.
+- **Tags System**: Categorize notes with multiple tags for better organization.
+- **Pin/Favorite Notes**: Mark important notes to keep them at the top of your list.
+- **Archive Notes**: Soft-delete notes by archiving them instead of permanent deletion.
 - **File Uploads**: Attach files to notes, which are securely stored in Azure Blob Storage.
 - **Serverless Processing**: An Azure Function automatically triggers on file upload to perform background tasks.
-- **Admin Analytics**: A simple admin endpoint to view application statistics.
+- **Admin Analytics**: Enhanced admin endpoint with statistics on notes, tags, archived items, and more.
 
 ## Local Development Setup
 
