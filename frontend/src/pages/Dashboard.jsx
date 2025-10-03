@@ -153,70 +153,70 @@ function Dashboard() {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="dashboard-container">
       <h2>Dashboard</h2>
       <p>Welcome, {user.email}!</p>
-      <button onClick={logout}>Logout</button>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      <button onClick={logout} className="btn-logout">Logout</button>
+      {error && <p className="error">{error}</p>}
 
       {/* Create Note Form */}
-      <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px' }}>
+      <div className="form-section">
         <h3>Create New Note</h3>
         <form onSubmit={createNote}>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <input
               type="text"
               placeholder="Title"
               value={newNote.title}
               onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
               required
-              style={{ width: '100%', padding: '8px' }}
+              className="form-input"
             />
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <textarea
               placeholder="Content"
               value={newNote.content}
               onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
               rows="4"
-              style={{ width: '100%', padding: '8px' }}
+              className="form-textarea"
             />
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div className="form-group">
             <input
               type="text"
               placeholder="Tags (comma-separated, e.g., work, important)"
               value={newNote.tags}
               onChange={(e) => setNewNote({ ...newNote, tags: e.target.value })}
-              style={{ width: '100%', padding: '8px' }}
+              className="form-input"
             />
           </div>
-          <button type="submit" style={{ padding: '8px 16px' }}>Create Note</button>
+          <button type="submit" className="btn-primary">Create Note</button>
         </form>
       </div>
 
       {/* Filters */}
-      <div style={{ marginTop: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px' }}>
+      <div className="form-section">
         <h3>Filters</h3>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="filters">
           <input
             type="text"
             placeholder="Search notes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ padding: '8px', flex: '1', minWidth: '200px' }}
+            className="search-input"
           />
           <select
             value={selectedTag}
             onChange={(e) => setSelectedTag(e.target.value)}
-            style={{ padding: '8px' }}
+            className="filter-select"
           >
             <option value="">All Tags</option>
             {allTags.map(tag => (
               <option key={tag} value={tag}>{tag}</option>
             ))}
           </select>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={showPinnedOnly}
@@ -224,7 +224,7 @@ function Dashboard() {
             />
             Pinned Only
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={showArchived}
@@ -237,118 +237,87 @@ function Dashboard() {
 
       {/* Edit Note Form */}
       {editingNote && (
-        <div style={{ marginTop: '20px', padding: '15px', border: '2px solid #007bff', borderRadius: '5px', backgroundColor: '#f0f8ff' }}>
+        <div className="form-section edit-section">
           <h3>Edit Note</h3>
           <form onSubmit={updateNote}>
-            <div style={{ marginBottom: '10px' }}>
+            <div className="form-group">
               <input
                 type="text"
                 placeholder="Title"
                 value={editingNote.title}
                 onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
                 required
-                style={{ width: '100%', padding: '8px' }}
+                className="form-input"
               />
             </div>
-            <div style={{ marginBottom: '10px' }}>
+            <div className="form-group">
               <textarea
                 placeholder="Content"
                 value={editingNote.content || ''}
                 onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
                 rows="4"
-                style={{ width: '100%', padding: '8px' }}
+                className="form-textarea"
               />
             </div>
-            <div style={{ marginBottom: '10px' }}>
+            <div className="form-group">
               <input
                 type="text"
                 placeholder="Tags (comma-separated)"
                 value={Array.isArray(editingNote.tags) ? editingNote.tags.join(', ') : ''}
                 onChange={(e) => setEditingNote({ ...editingNote, tags: e.target.value.split(',').map(t => t.trim()) })}
-                style={{ width: '100%', padding: '8px' }}
+                className="form-input"
               />
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="submit" style={{ padding: '8px 16px' }}>Update Note</button>
-              <button type="button" onClick={() => setEditingNote(null)} style={{ padding: '8px 16px' }}>Cancel</button>
+            <div className="button-group">
+              <button type="submit" className="btn-primary">Update Note</button>
+              <button type="button" onClick={() => setEditingNote(null)} className="btn-secondary">Cancel</button>
             </div>
           </form>
         </div>
       )}
 
       {/* Notes List */}
-      <h3 style={{ marginTop: '20px' }}>Your Notes ({notes.length})</h3>
+      <h3 className="notes-header">Your Notes ({notes.length})</h3>
       {notes.length === 0 ? (
-        <p>No notes found. Try adjusting your filters or create a new note.</p>
+        <p className="no-notes">No notes found. Try adjusting your filters or create a new note.</p>
       ) : (
-        <div style={{ marginTop: '10px' }}>
+        <div className="notes-list">
           {notes.map((note) => (
-            <div
-              key={note.id}
-              style={{
-                padding: '15px',
-                marginBottom: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '5px',
-                backgroundColor: note.is_pinned ? '#fffacd' : (note.is_archived ? '#f0f0f0' : '#fff'),
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: '0 0 10px 0' }}>
-                    {note.is_pinned && '📌 '}
-                    {note.title}
-                    {note.is_archived && ' (Archived)'}
-                  </h4>
-                  <p style={{ margin: '0 0 10px 0', color: '#666' }}>{note.content}</p>
-                  {note.tags && note.tags.length > 0 && (
-                    <div style={{ marginBottom: '10px' }}>
-                      {note.tags.map(tag => (
-                        <span
-                          key={tag}
-                          style={{
-                            display: 'inline-block',
-                            padding: '2px 8px',
-                            marginRight: '5px',
-                            backgroundColor: '#e0e0e0',
-                            borderRadius: '3px',
-                            fontSize: '12px',
-                          }}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+            <article key={note.id} className={`note-card ${note.is_pinned ? 'pinned' : ''} ${note.is_archived ? 'archived' : ''}`}>
+              <div className="note-content">
+                <h4 className="note-title">
+                  {note.is_pinned && '📌 '}
+                  {note.title}
+                  {note.is_archived && ' (Archived)'}
+                </h4>
+                <p className="note-text">{note.content}</p>
+                {note.tags && note.tags.length > 0 && (
+                  <div className="note-tags">
+                    {note.tags.map(tag => (
+                      <span key={tag} className="tag">{tag}</span>
+                    ))}
+                  </div>
+                )}
+                <small className="note-meta">
+                  Created: {new Date(note.created_at).toLocaleDateString()}
+                  {note.updated_at !== note.created_at && (
+                    <> • Updated: {new Date(note.updated_at).toLocaleDateString()}</>
                   )}
-                  <small style={{ color: '#999' }}>
-                    Created: {new Date(note.created_at).toLocaleDateString()}
-                    {note.updated_at !== note.created_at && (
-                      <> • Updated: {new Date(note.updated_at).toLocaleDateString()}</>
-                    )}
-                  </small>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginLeft: '10px' }}>
-                  <button onClick={() => togglePin(note.id)} style={{ padding: '5px 10px', fontSize: '12px' }}>
-                    {note.is_pinned ? 'Unpin' : 'Pin'}
-                  </button>
-                  <button onClick={() => setEditingNote(note)} style={{ padding: '5px 10px', fontSize: '12px' }}>
-                    Edit
-                  </button>
-                  {note.is_archived ? (
-                    <button onClick={() => unarchiveNote(note.id)} style={{ padding: '5px 10px', fontSize: '12px' }}>
-                      Unarchive
-                    </button>
-                  ) : (
-                    <button onClick={() => archiveNote(note.id)} style={{ padding: '5px 10px', fontSize: '12px' }}>
-                      Archive
-                    </button>
-                  )}
-                  <button onClick={() => deleteNote(note.id)} style={{ padding: '5px 10px', fontSize: '12px', color: 'red' }}>
-                    Delete
-                  </button>
-                </div>
+                </small>
               </div>
-            </div>
+              <div className="note-actions">
+                <button onClick={() => togglePin(note.id)} className="btn-small">
+                  {note.is_pinned ? 'Unpin' : 'Pin'}
+                </button>
+                <button onClick={() => setEditingNote(note)} className="btn-small">Edit</button>
+                {note.is_archived ? (
+                  <button onClick={() => unarchiveNote(note.id)} className="btn-small">Unarchive</button>
+                ) : (
+                  <button onClick={() => archiveNote(note.id)} className="btn-small">Archive</button>
+                )}
+                <button onClick={() => deleteNote(note.id)} className="btn-danger">Delete</button>
+              </div>
+            </article>
           ))}
         </div>
       )}
