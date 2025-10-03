@@ -1,4 +1,4 @@
-name: Claude Code with Rotating API Keys
+name: Claude Code
 on:
   issue_comment:
     types: [created]
@@ -22,7 +22,7 @@ jobs:
       pull-requests: read
       issues: read
       id-token: write
-      actions: read
+      actions: read # Required for Claude to read CI results on PRs
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,138 +31,95 @@ jobs:
 
       - name: Setup Claude Code Router
         run: |
-          # Install bun
+          # Install bun package manager
           curl -fsSL https://bun.sh/install | bash
           
-          # Create router directory
+          # Create router config directory
           mkdir -p $HOME/.claude-code-router
           
-          # Create custom router that rotates API keys
-          cat << 'EOF' > $HOME/.claude-code-router/custom-router.js
-          // Simple per-call API key rotation
-          let callCounter = 0;
-          
-          module.exports = async function router(req, config) {
-            callCounter++;
-            
-            // Rotate through 4 providers (0,1,2,3)
-            const providerIndex = (callCounter - 1) % 4;
-            const providerName = `gemini-key-${providerIndex + 1}`;
-            
-            console.log(`[API Call #${callCounter}] → Using ${providerName}`);
-            
-            // Return provider and model
-            return `${providerName},gemini-2.5-flash`;
-          };
-          EOF
-          
-          # Create config with 4 providers (same model, different keys)
+          # Create config file
           cat << 'EOF' > $HOME/.claude-code-router/config.json
           {
             "LOG": true,
             "LOG_LEVEL": "info",
             "NON_INTERACTIVE_MODE": true,
             "API_TIMEOUT_MS": 600000,
-            "CUSTOM_ROUTER_PATH": "/home/runner/.claude-code-router/custom-router.js",
             "Providers": [
               {
-                "name": "gemini-key-1",
-                "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
-                "api_key": "$GEMINI_API_KEY_1",
-                "models": ["gemini-2.5-flash"],
+                "name": "openrouter",
+                "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
+                "api_key": "$OPENROUTER_API_KEY",
+                "models": [
+                  "deepseek/deepseek-chat-v3.1:free"
+                ],
                 "transformer": {
-                  "use": ["gemini"]
-                }
-              },
-              {
-                "name": "gemini-key-2",
-                "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
-                "api_key": "$GEMINI_API_KEY_2",
-                "models": ["gemini-2.5-flash"],
-                "transformer": {
-                  "use": ["gemini"]
-                }
-              },
-              {
-                "name": "gemini-key-3",
-                "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
-                "api_key": "$GEMINI_API_KEY_3",
-                "models": ["gemini-2.5-flash"],
-                "transformer": {
-                  "use": ["gemini"]
-                }
-              },
-              {
-                "name": "gemini-key-4",
-                "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
-                "api_key": "$GEMINI_API_KEY_4",
-                "models": ["gemini-2.5-flash"],
-                "transformer": {
-                  "use": ["gemini"]
+                  "use": ["openrouter"]
                 }
               }
-            ]
+            ],
+            "Router": {
+              "default": "openrouter,deepseek/deepseek-chat-v3.1:free"
+            }
           }
           EOF
           
-          echo "✅ Setup complete!"
-          echo "🔄 Rotation pattern: Call 1→Key1, Call 2→Key2, Call 3→Key3, Call 4→Key4, Call 5→Key1..."
+          echo "✅ Router configured"
         shell: bash
         env:
-          GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
-          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
-          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
-          GEMINI_API_KEY_4: ${{ secrets.GEMINI_API_KEY_4 }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
-      - name: Start Router Service
+      - name: Start Claude Code Router Service
         run: |
-          # Start the router
+          # Start the router in background
           nohup ~/.bun/bin/bunx @musistudio/claude-code-router@latest start &
           
+          # Wait for service initialization
           sleep 5
           
-          # Verify it's running
+          # Verify service is running
           if curl -f http://localhost:3456/health 2>/dev/null; then
-            echo "✅ Router is running"
-            echo "📊 Each API call will use a different key in rotation"
+            echo "✅ Router service is healthy"
           else
-            echo "⚠️ Router may still be starting..."
+            echo "⚠️ Health check failed, but service may still be running"
           fi
         shell: bash
         env:
-          GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
-          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
-          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
-          GEMINI_API_KEY_4: ${{ secrets.GEMINI_API_KEY_4 }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
         env:
+          # Point to local router
           ANTHROPIC_BASE_URL: http://localhost:3456
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         with:
+          # Router handles auth
           anthropic_api_key: "router-managed"
+          
+          # Preserve your additional permissions
           additional_permissions: |
             actions: read
+          
+          # Optional: Custom prompt (uncomment if needed)
+          # prompt: 'Update the pull request description to include a summary of changes.'
+          
+          # Optional: Claude args
+          # claude_args: '--allowed-tools Bash(gh pr:*)'
 
-      - name: Show Rotation Stats
+      - name: Usage Report (Optional)
         if: always()
         run: |
-          echo "📊 API Key Rotation Report"
-          echo "=========================="
-          
-          # Count calls per key from logs
-          LOG_FILE=$(ls $HOME/.claude-code-router/logs/ccr-*.log 2>/dev/null | head -1)
-          
-          if [ -f "$LOG_FILE" ]; then
-            echo "Calls per API key:"
-            echo "  Key 1: $(grep "gemini-key-1" $LOG_FILE | wc -l) calls"
-            echo "  Key 2: $(grep "gemini-key-2" $LOG_FILE | wc -l) calls"
-            echo "  Key 3: $(grep "gemini-key-3" $LOG_FILE | wc -l) calls"
-            echo "  Key 4: $(grep "gemini-key-4" $LOG_FILE | wc -l) calls"
-            
-            echo ""
-            echo "Last 10 API calls:"
-            grep "Using gemini-key" $LOG_FILE | tail -10
-          fi
+          echo "=== Model Usage ==="
+          echo "✅ Using FREE DeepSeek v3.1 model"
+          echo "💰 Cost: $0.00 per request"
+          echo "📊 No usage limits on free tier"
         continue-on-error: true
+
+      - name: Debug on Failure (Optional)
+        if: failure()
+        run: |
+          echo "=== Router Logs ==="
+          tail -n 50 $HOME/.claude-code-router/logs/ccr-*.log 2>/dev/null || echo "No logs found"
+          echo "=== Service Check ==="
+          ps aux | grep claude-code-router || echo "Router not running"
