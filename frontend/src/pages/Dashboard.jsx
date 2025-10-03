@@ -42,18 +42,18 @@ function Dashboard() {
       <p>Welcome, {user.email}!</p>
       <button onClick={logout}>Logout</button>
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      <h3>Your Notes</h3>
+      <h3>Your Notes</h3>\n        {notes.length > 0 && <p>Showing {notes.length} notes</p>}
       {notes.length === 0 ? (
         <p>You have no notes yet.</p>
       ) : (
-        <ul>
+        <div className="notes-grid">
           {notes.map((note) => (
-            <li key={note.id}>
+            <div key={note.id} className="note-card">
               <h4>{note.title}</h4>
               <p>{note.content}</p>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
