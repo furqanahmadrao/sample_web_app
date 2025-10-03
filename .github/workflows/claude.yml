@@ -46,19 +46,19 @@ jobs:
             "API_TIMEOUT_MS": 600000,
             "Providers": [
               {
-                "name": "openrouter",
-                "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
+                "name": "gemini",
+                "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
                 "api_key": "$OPENROUTER_API_KEY",
                 "models": [
-                  "dx-ai/grok-4-fast:free"
+                  "gemini-2.5-flash"
                 ],
                 "transformer": {
-                  "use": ["openrouter"]
+                  "use": ["gemini"]
                 }
               }
             ],
             "Router": {
-              "default": "openrouter,x-ai/grok-4-fast:free"
+              "default": "gemini,gemini-2.5-flash"
             }
           }
           EOF
