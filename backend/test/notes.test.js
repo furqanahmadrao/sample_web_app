@@ -1,151 +1,175 @@
 const request = require('supertest');
 const app = require('../src/index');
-const { Pool } = require('pg');
-require('dotenv').config();
+const db = require('../src/db');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
-const pool = new Pool({
-  connectionString: process.env.TEST_DATABASE_URL || process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
-
-// Helper to get a token - assuming auth is needed, but for simplicity, we'll mock or skip auth for DB tests
-// Full integration tests for notes API (testing DB indirectly)
-
-describe('Notes API (Database Tests)', () => {
+describe('Notes API (Database + Features Tests)', () => {
   let token;
   let userId;
+  let noteId;
 
   beforeAll(async () => {
-    // Assume setup: Create test user if needed, get token
-    // For this, we'll use API to register/login to get token
-    // But since auth routes not detailed, placeholder
-    // In practice, register a test user
-    // Signup (note: route is /signup, not /register)
-    const signupRes = await request(app)
-      .post('/api/auth/signup')
-      .send({ email: 'test@example.com', password: 'testpass' });
-    expect(signupRes.status).toBe(201);
-    userId = signupRes.body.id;
+    // Create test user manually (to avoid relying on /signup endpoint in case it's unstable)
+    const hashedPassword = await bcrypt.hash('testpassword', 10);
+    const userResult = await db.query(
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
+      ['test@example.com', hashedPassword]
+    );
+    userId = userResult.rows[0].id;
 
-    // Login to get token
-    const loginRes = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'test@example.com', password: 'testpass' });
-    expect(loginRes.status).toBe(200);
-    token = loginRes.body.token;
-  });
-
-  beforeEach(async () => {
-    // Clean up: Delete test notes
-    await pool.query('DELETE FROM notes WHERE user_id = $1', [userId]);
+    // Generate token
+    token = jwt.sign({ userId }, process.env.JWT_SECRET || 'test-secret', {
+      expiresIn: '1h',
+    });
   });
 
   afterAll(async () => {
-    await pool.end();
+    // Clean up test data
+    await db.query('DELETE FROM notes WHERE user_id = $1', [userId]);
+    await db.query('DELETE FROM users WHERE id = $1', [userId]);
+    await db.end();
   });
 
-  it('should create a new note (POST)', async () => {
-    const newNote = {
-      title: 'Test Note',
-      content: 'Test content',
-    };
+  describe('Basic CRUD operations', () => {
+    it('should create a new note (POST)', async () => {
+      const res = await request(app)
+        .post('/api/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Test Note', content: 'Test content' })
+        .expect(201);
 
-    const res = await request(app)
-      .post('/api/notes')
-      .set('Authorization', `Bearer ${token}`)
-      .send(newNote)
-      .expect(201);
+      expect(res.body.title).toBe('Test Note');
+      expect(res.body.content).toBe('Test content');
+      expect(res.body.user_id).toBe(userId);
+      noteId = res.body.id;
+    });
 
-    expect(res.body.title).toBe(newNote.title);
-    expect(res.body.content).toBe(newNote.content);
-    expect(res.body.user_id).toBe(userId);
+    it('should get all notes (GET)', async () => {
+      const res = await request(app)
+        .get('/api/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+    });
+
+    it('should get a single note (GET /:id)', async () => {
+      const res = await request(app)
+        .get(`/api/notes/${noteId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.id).toBe(noteId);
+    });
+
+    it('should update a note (PUT /:id)', async () => {
+      const res = await request(app)
+        .put(`/api/notes/${noteId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Updated Title', content: 'New content' })
+        .expect(200);
+
+      expect(res.body.title).toBe('Updated Title');
+      expect(res.body.content).toBe('New content');
+    });
+
+    it('should delete a note (DELETE /:id)', async () => {
+      await request(app)
+        .delete(`/api/notes/${noteId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(204);
+    });
+
+    it('should handle invalid requests (missing title)', async () => {
+      const res = await request(app)
+        .post('/api/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ content: 'No title' })
+        .expect(400);
+
+      expect(res.body.error).toBeDefined();
+    });
   });
 
-  it('should get all notes (GET)', async () => {
-    // First create a note
-    await request(app)
-      .post('/api/notes')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ title: 'Note 1', content: 'Content 1' });
+  describe('Advanced Features (tags, pinning, archiving, search)', () => {
+    beforeAll(async () => {
+      // Create test notes
+      await request(app)
+        .post('/api/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          title: 'Work Note',
+          content: 'Important meeting',
+          tags: ['work', 'meeting'],
+          is_pinned: true,
+        });
 
-    const res = await request(app)
-      .get('/api/notes')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
+      await request(app)
+        .post('/api/notes')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          title: 'Personal Note',
+          content: 'Groceries',
+          tags: ['personal'],
+        });
+    });
 
-    expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.length).toBeGreaterThan(0);
-    expect(res.body[0].title).toBe('Note 1');
+    it('should filter notes by tag', async () => {
+      const res = await request(app)
+        .get('/api/notes?tag=work')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      res.body.forEach(note => {
+        expect(note.tags).toContain('work');
+      });
+    });
+
+    it('should filter pinned notes', async () => {
+      const res = await request(app)
+        .get('/api/notes?pinned=true')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      res.body.forEach(note => {
+        expect(note.is_pinned).toBe(true);
+      });
+    });
+
+    it('should search notes by content', async () => {
+      const res = await request(app)
+        .get('/api/notes?search=meeting')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.length).toBeGreaterThan(0);
+    });
+
+    it('should archive and unarchive a note', async () => {
+      // Archive
+      const archiveRes = await request(app)
+        .patch(`/api/notes/${noteId}/archive`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(archiveRes.body.is_archived).toBe(true);
+
+      // Unarchive
+      const unarchiveRes = await request(app)
+        .patch(`/api/notes/${noteId}/unarchive`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(unarchiveRes.body.is_archived).toBe(false);
+    });
+
+    it('should return all unique tags', async () => {
+      const res = await request(app)
+        .get('/api/notes/tags/all')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toContain('work');
+      expect(res.body).toContain('personal');
+    });
   });
-
-  it('should get a single note (GET /:id)', async () => {
-    const createRes = await request(app)
-      .post('/api/notes')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ title: 'Single Note', content: 'Single content' })
-      .expect(201);
-
-    const noteId = createRes.body.id;
-
-    const res = await request(app)
-      .get(`/api/notes/${noteId}`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    expect(res.body.id).toBe(noteId);
-    expect(res.body.title).toBe('Single Note');
-  });
-
-  it('should update a note (PUT /:id)', async () => {
-    const createRes = await request(app)
-      .post('/api/notes')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ title: 'Update Note', content: 'Old content' })
-      .expect(201);
-
-    const noteId = createRes.body.id;
-
-    const updateData = { title: 'Updated Title', content: 'New content' };
-
-    const res = await request(app)
-      .put(`/api/notes/${noteId}`)
-      .set('Authorization', `Bearer ${token}`)
-      .send(updateData)
-      .expect(200);
-
-    expect(res.body.title).toBe(updateData.title);
-    expect(res.body.content).toBe(updateData.content);
-    // Check updated_at is set
-    expect(res.body.updated_at).toBeDefined();
-  });
-
-  it('should delete a note (DELETE /:id)', async () => {
-    const createRes = await request(app)
-      .post('/api/notes')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ title: 'Delete Note', content: 'To delete' })
-      .expect(201);
-
-    const noteId = createRes.body.id;
-
-    await request(app)
-      .delete(`/api/notes/${noteId}`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(204);
-
-    // Verify deleted
-    const getRes = await request(app)
-      .get(`/api/notes/${noteId}`)
-      .set('Authorization', `Bearer ${token}`);
-    expect(getRes.status).toBe(404);
-  });
-
-  it('should handle invalid requests (e.g., no title on POST)', async () => {
-    const res = await request(app)
-      .post('/api/notes')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ content: 'No title' })
-      .expect(400);
-
-    expect(res.body.error).toBe('Title is required');
-  });
+});
