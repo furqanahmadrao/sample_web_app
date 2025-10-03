@@ -29,11 +29,6 @@ jobs:
         with:
           fetch-depth: 1
           
-      - name: Set Claude Code identity
-        run: |
-          git config --global user.name "Claude Code"
-          git config --global user.email "123456+claude-code-bot@users.noreply.github.com"
-
       - name: Setup Claude Code Router
         run: |
           # Install bun package manager
