@@ -39,6 +39,7 @@ CloudNotes is built with a modern, scalable architecture that mirrors what you'd
 - **Notes Management**: Full CRUD (Create, Read, Update, Delete) operations for notes, tied to individual users.
 - **File Uploads**: Attach files to notes, which are securely stored in Azure Blob Storage.
 - **Serverless Processing**: An Azure Function automatically triggers on file upload to perform background tasks.
+- **Enhanced Analytics**: Admin endpoint provides detailed statistics including archived, pinned, and tagged note counts.
 
 ### ✨ New Enhanced Features
 - **🔍 Full-Text Search**: Search notes by title and content using PostgreSQL's powerful full-text search with automatic stemming and relevance ranking.
@@ -159,7 +160,12 @@ The core of this project is the hands-on learning path. Follow the connection gu
 | 4-6 | **Provision**: Run Bicep script              | Resources are visible in the Azure portal.    |
 | 7-9 | **Connect**: PostgreSQL Database             | Backend can read/write data from Azure DB.    |
 | 10-12| **Connect**: Azure Blob Storage              | File uploads from the app appear in storage.  |
-| ... | ...                                          | ...                                           |
+| 13-15| **Connect**: Azure Functions                 | Thumbnails are generated for uploaded files.  |
+| 16-18| **Connect**: Azure Key Vault                 | Backend retrieves secrets from Key Vault.     |
+| 19-21| **Setup**: CI/CD with GitHub Actions         | Tests run and backend deploys to App Service. |
+| 22-24| **Implement**: Managed Identities            | App Service accesses DB/Storage via MI.       |
+| 25-27| **Monitor**: Application Insights            | Telemetry data appears in App Insights.       |
+| 28-30| **Review**: Security & Cost Control          | Security checklist reviewed, budget set.      |
 
 ## Documentation
 
