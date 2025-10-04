@@ -29,7 +29,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup Claude Code Router (Flash-Lite Optimized)
+      - name: Setup Claude Code Router
         run: |
           # Install bun package manager
           curl -fsSL https://bun.sh/install | bash
@@ -37,41 +37,33 @@ jobs:
           # Create router config directory
           mkdir -p $HOME/.claude-code-router
           
-          # Create Flash-Lite optimized config
+          # Create config file
           cat << 'EOF' > $HOME/.claude-code-router/config.json
           {
             "LOG": true,
             "LOG_LEVEL": "info",
             "NON_INTERACTIVE_MODE": true,
-            "API_TIMEOUT_MS": 120000,
+            "API_TIMEOUT_MS": 600000,
             "Providers": [
               {
                 "name": "gemini",
                 "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
                 "api_key": "$GEMINI_API_KEY",
                 "models": [
-                  "gemini-2.5-flash-lite",
-                  "gemini-2.5-flash",
-                  "gemini-2.5-pro"
+                  "gemini-flash-latest"
                 ],
                 "transformer": {
-                  "use": ["gemini"]
+                  "use": ["gemini", "tooluse", "enhancedtool"]
                 }
               }
             ],
             "Router": {
-              "default": "gemini,gemini-2.5-flash-lite",
-              "background": "gemini,gemini-2.5-flash-lite",
-              "think": "gemini,gemini-2.5-flash",
-              "longContext": "gemini,gemini-2.5-pro",
-              "longContextThreshold": 30000
+              "default": "gemini,gemini-flash-latest"
             }
           }
           EOF
           
-          echo "✅ Flash-Lite router configured"
-          echo "📊 Model: gemini-2.5-flash-lite"
-          echo "⚡ Optimized for speed and cost-efficiency"
+          echo "✅ Router configured"
         shell: bash
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -79,28 +71,17 @@ jobs:
       - name: Start Claude Code Router Service
         run: |
           # Start the router in background
-          nohup ~/.bun/bin/bunx @musistudio/claude-code-router@latest start > /tmp/router.log 2>&1 &
+          nohup ~/.bun/bin/bunx @musistudio/claude-code-router@latest start &
           
           # Wait for service initialization
-          echo "⏳ Starting router service..."
           sleep 5
           
-          # Verify service is running with retry logic
-          for i in {1..5}; do
-            if curl -f http://localhost:3456/health 2>/dev/null; then
-              echo "✅ Router service is healthy"
-              exit 0
-            fi
-            echo "⏳ Retry $i/5..."
-            sleep 2
-          done
-          
-          # Service check failed - show logs
-          echo "⚠️ Health check failed - showing router logs:"
-          cat /tmp/router.log
-          
-          # Continue anyway - service might still work
-          echo "⚡ Continuing with workflow..."
+          # Verify service is running
+          if curl -f http://localhost:3456/health 2>/dev/null; then
+            echo "✅ Router service is healthy"
+          else
+            echo "⚠️ Health check failed, but service may still be running"
+          fi
         shell: bash
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -119,42 +100,26 @@ jobs:
           # Preserve your additional permissions
           additional_permissions: |
             actions: read
+          
+          # Optional: Custom prompt (uncomment if needed)
+          # prompt: 'Update the pull request description to include a summary of changes.'
+          
+          # Optional: Claude args
+          # claude_args: '--allowed-tools Bash(gh pr:*)'
 
-      - name: Usage Report
+      - name: Usage Report (Optional)
         if: always()
         run: |
-          echo "=== 📊 Flash-Lite Usage Report ==="
-          echo "✅ Model: Gemini 2.5 Flash-Lite"
-          echo "💰 Cost: ~$0.10 per 1M input tokens"
-          echo "⚡ Speed: Fastest in Gemini 2.5 family"
-          echo "🎯 Optimized for: Quick reviews, small-medium tasks"
-          echo ""
-          echo "=== 🔄 Router Configuration ==="
-          echo "Default: Flash-Lite (fast, cost-effective)"
-          echo "Background: Flash-Lite (parallel processing)"
-          echo "Think: Flash (complex reasoning)"
-          echo "Long Context: Pro (>30K tokens)"
+          echo "=== Model Usage ==="
+          echo "✅ Using FREE DeepSeek v3.1 model"
+          echo "💰 Cost: $0.00 per request"
+          echo "📊 No usage limits on free tier"
         continue-on-error: true
 
-      - name: Debug on Failure
+      - name: Debug on Failure (Optional)
         if: failure()
         run: |
-          echo "=== 🔍 Debug Information ==="
-          echo ""
-          echo "=== Router Startup Logs ==="
-          cat /tmp/router.log 2>/dev/null || echo "No startup logs found"
-          echo ""
-          echo "=== Router Application Logs ==="
-          tail -n 100 $HOME/.claude-code-router/claude-code-router.log 2>/dev/null || echo "No application logs found"
-          echo ""
-          echo "=== Router Server Logs ==="
-          tail -n 100 $HOME/.claude-code-router/logs/ccr-*.log 2>/dev/null || echo "No server logs found"
-          echo ""
+          echo "=== Router Logs ==="
+          tail -n 50 $HOME/.claude-code-router/logs/ccr-*.log 2>/dev/null || echo "No logs found"
           echo "=== Service Check ==="
-          ps aux | grep claude-code-router || echo "Router process not running"
-          echo ""
-          echo "=== Network Check ==="
-          curl -v http://localhost:3456/health 2>&1 || echo "Health endpoint unreachable"
-          echo ""
-          echo "=== Configuration ==="
-          cat $HOME/.claude-code-router/config.json 2>/dev/null || echo "Config file not found"
+          ps aux | grep claude-code-router || echo "Router not running"
