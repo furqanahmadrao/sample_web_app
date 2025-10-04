@@ -53,7 +53,7 @@ jobs:
                   "gemini-2.5-flash"
                 ],
                 "transformer": {
-                  "use": ["gemini"]
+                  "use": ["gemini", "tooluse", "enhancedtool"]
                 }
               }
             ],
