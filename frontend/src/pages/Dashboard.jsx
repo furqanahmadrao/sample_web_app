@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import TagFilter from '../components/TagFilter';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -206,16 +207,12 @@ function Dashboard() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
-          <select
-            value={selectedTag}
-            onChange={(e) => setSelectedTag(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">All Tags</option>
-            {allTags.map(tag => (
-              <option key={tag} value={tag}>{tag}</option>
-            ))}
-          </select>
+          <TagFilter
+            allTags={allTags}
+            selectedTag={selectedTag}
+            setSelectedTag={setSelectedTag}
+            fetchNotes={fetchNotes}
+          />
           <label className="checkbox-label">
             <input
               type="checkbox"
