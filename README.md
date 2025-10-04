@@ -173,6 +173,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - **[New Features API](docs/NEW_FEATURES.md)** - Full API documentation for search, tags, pin, and archive features
 - **[Quick Reference](docs/QUICK_REFERENCE.md)** - Developer quick reference for database schema, endpoints, and code examples
 - **[Connection Guides](docs/connection-guides/)** - Step-by-step guides for connecting to Azure services
+- **Code Quality**: `ESLint` is used for code linting in the backend to maintain code quality.
 
 ### Getting Started
 1. Read the [Features Guide](docs/FEATURES_GUIDE.md) to understand what CloudNotes can do
@@ -185,6 +186,7 @@ Comprehensive documentation is available in the `docs/` directory:
 -   [ ] **Managed Identities**: The Bicep template configures Managed Identities for the App Service and Function App. Use them to access other Azure resources securely.
 -   [ ] **Key Vault Access Policies**: Configure Key Vault access policies to grant the minimum required permissions to your services.
 -   [ ] **CORS**: Configure CORS policies on your storage accounts and App Service to only allow requests from your frontend's domain.
+-   [ ] **Helmet**: Ensure `helmet` is configured in the Node.js backend to set security-related HTTP headers.
 
 ## Cost Control
 
