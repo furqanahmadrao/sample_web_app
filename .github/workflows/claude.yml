@@ -53,7 +53,7 @@ jobs:
                   "gemini-flash-latest"
                 ],
                 "transformer": {
-                  "use": ["gemini", "tooluse", "enhancedtool"]
+                  "use": ["gemini"]
                 }
               }
             ],
