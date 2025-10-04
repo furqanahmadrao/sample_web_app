@@ -50,7 +50,7 @@ jobs:
                 "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
                 "api_key": "$GEMINI_API_KEY",
                 "models": [
-                  "gemini-flash-latest"
+                  "gemini-2.5-flash"
                 ],
                 "transformer": {
                   "use": ["gemini"]
@@ -58,7 +58,7 @@ jobs:
               }
             ],
             "Router": {
-              "default": "gemini,gemini-flash-latest"
+              "default": "gemini,gemini-2.5-flash"
             }
           }
           EOF
