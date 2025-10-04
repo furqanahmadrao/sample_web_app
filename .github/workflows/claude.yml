@@ -48,7 +48,7 @@ jobs:
               {
                 "name": "gemini",
                 "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
-                "api_key": "$GEMINI_API_KEY",
+                "api_key": "$OPENROUTER_API_KEY",
                 "models": [
                   "gemini-2.5-flash"
                 ],
@@ -66,7 +66,7 @@ jobs:
           echo "✅ Router configured"
         shell: bash
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
       - name: Start Claude Code Router Service
         run: |
@@ -84,7 +84,7 @@ jobs:
           fi
         shell: bash
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
       - name: Run Claude Code
         id: claude
@@ -92,7 +92,7 @@ jobs:
         env:
           # Point to local router
           ANTHROPIC_BASE_URL: http://localhost:3456
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         with:
           # Router handles auth
           anthropic_api_key: "router-managed"
