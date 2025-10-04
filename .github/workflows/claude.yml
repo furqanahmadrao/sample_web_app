@@ -48,9 +48,9 @@ jobs:
               {
                 "name": "gemini",
                 "api_base_url": "https://generativelanguage.googleapis.com/v1beta/models/",
-                "api_key": "$OPENROUTER_API_KEY",
+                "api_key": "$GEMINI_API_KEY",
                 "models": [
-                  "gemini-2.5-flash"
+                  "gemini-flash-latest"
                 ],
                 "transformer": {
                   "use": ["gemini"]
@@ -58,7 +58,7 @@ jobs:
               }
             ],
             "Router": {
-              "default": "gemini,gemini-2.5-flash"
+              "default": "gemini,gemini-flash-latest"
             }
           }
           EOF
@@ -66,7 +66,7 @@ jobs:
           echo "✅ Router configured"
         shell: bash
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Start Claude Code Router Service
         run: |
@@ -84,7 +84,7 @@ jobs:
           fi
         shell: bash
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Run Claude Code
         id: claude
@@ -92,7 +92,7 @@ jobs:
         env:
           # Point to local router
           ANTHROPIC_BASE_URL: http://localhost:3456
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           # Router handles auth
           anthropic_api_key: "router-managed"
@@ -111,7 +111,6 @@ jobs:
         if: always()
         run: |
           echo "=== Model Usage ==="
-          echo "✅ Using FREE DeepSeek v3.1 model"
           echo "💰 Cost: $0.00 per request"
           echo "📊 No usage limits on free tier"
         continue-on-error: true
